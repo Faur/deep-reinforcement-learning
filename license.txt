@@ -1,0 +1,7 @@
+This code is protected under the Creative Commons Attribution-ShareAlike License. 
+CC BY-SA
+
+This license lets you remix, tweak, and build upon the work even for commercial purposes, as long as you credit the original author
+and license new creations under the identical terms. This license is often compared to “copyleft” free and open source software licenses. 
+
+See https://creativecommons.org/licenses/by-sa/4.0/legalcode for details
