@@ -79,7 +79,10 @@ class Experience_buffer():
 				batch[item].append(example[item])
 
 		for item in batch:
-			batch[item] = np.vstack(batch[item])
+			# Make the data into an array
+			batch[item] = np.vstack(batch[item]) 
+			# Remove superfluous dimensions
+			batch[item] = np.squeeze(batch[item])
 
 		return batch
 				
@@ -97,21 +100,34 @@ class Experience_buffer():
 		print('Test that buffer is limited to ' + str(limit))
 		buffer = Experience_buffer(limit)
 		for i in range(5):
-			obs = np.array([i,i])
-			experience = {'obs':[obs], 'action':i, 'reward':i, 'next_obs':[obs], 'done':i}
+			obs = i
+			experience = {'obs':obs, 'action':i, 'reward':i, 'next_obs':obs, 'done':i}
 			print(i, buffer.buffer_size())
 			buffer.add(experience)
 		
 		print('\nContent of buffer')
 		print(buffer)
 
-		print('Test 1d obs')
+		print('Test 0d obs')
 		batch = buffer.sample(5)
-		print(type(batch['obs'])) # should return a list
+		print(type(batch['obs']))
+		print('Should not have superflouous dimensions')
 		print(batch['obs'].shape)
-
 		buffer.clear()
 		print('\nTest buffer.clear: len = ' + str(buffer.buffer_size()))
+
+
+		print('\nTest 1d obs')
+		for i in range(5):
+			obs = np.array([i,i])
+			experience = {'obs':[obs], 'action':i, 'reward':i, 'next_obs':[obs], 'done':i}
+			buffer.add(experience)
+
+		batch = buffer.sample(5)
+		print(type(batch['obs'])) 
+		print(batch['obs'].shape)
+		buffer.clear()
+
 
 		print('\nTest 2d obs')
 		for i in range(5):
@@ -120,9 +136,8 @@ class Experience_buffer():
 			buffer.add(experience)
 
 		batch = buffer.sample(5)
-		print(type(batch['obs'])) # should return a list
+		print(type(batch['obs']))
 		print(batch['obs'].shape)
-		# print(batch)
 
 
 if __name__ =='__main__':
