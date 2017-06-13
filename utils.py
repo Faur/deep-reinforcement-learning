@@ -57,11 +57,16 @@ class Experience_buffer():
 		return len(self.buffer)
 	
 	def add(self, experience):
-		""" Add ONE experience to the experience buffer"""
+		""" Add ONE experience to the experience buffer
+			Every entry in an expericen shold be i dimensional at most!
+		"""
 		self.buffer.append(experience)
 		while len(self.buffer) > self.buffer_capacity:
 			self.buffer.pop(0)
 	
+	def clear(self):
+		self.buffer = []
+
 	def sample(self, size):
 		""" Draw 'size' random samples from the experience buffer, 
 			with replacement"""
@@ -72,9 +77,13 @@ class Experience_buffer():
 			example = self.buffer[i]
 			for item in example:
 				batch[item].append(example[item])
+
+		for item in batch:
+			batch[item] = np.vstack(batch[item])
+
 		return batch
 				
-	def test():
+	def test(self):
 		""" Simple test, validating that the replay buffer works
 			Tests the following features:
 				__str__
@@ -84,20 +93,39 @@ class Experience_buffer():
 		"""
 		print('Testing Experience_buffer')
 
-		
-		buffer = Experience_buffer(5)
-		for i in range(8):
-			experience = {'obs':i, 'action':i, 'reward':i, 'next_obs':i, 'done':i}
+		limit = 3
+		print('Test that buffer is limited to ' + str(limit))
+		buffer = Experience_buffer(limit)
+		for i in range(5):
+			obs = np.array([i,i])
+			experience = {'obs':[obs], 'action':i, 'reward':i, 'next_obs':[obs], 'done':i}
 			print(i, buffer.buffer_size())
 			buffer.add(experience)
 		
 		print('\nContent of buffer')
 		print(buffer)
-		
-		print('A sample')
+
+		print('Test 1d obs')
 		batch = buffer.sample(5)
 		print(type(batch['obs'])) # should return a list
-		print(batch)
+		print(batch['obs'].shape)
 
+		buffer.clear()
+		print('\nTest buffer.clear: len = ' + str(buffer.buffer_size()))
+
+		print('\nTest 2d obs')
+		for i in range(5):
+			obs = np.array([[i,i], [i,i]])
+			experience = {'obs':[obs], 'action':i, 'reward':i, 'next_obs':[obs], 'done':i}
+			buffer.add(experience)
+
+		batch = buffer.sample(5)
+		print(type(batch['obs'])) # should return a list
+		print(batch['obs'].shape)
+		# print(batch)
+
+
+if __name__ =='__main__':
+	Experience_buffer().test()
 
 
