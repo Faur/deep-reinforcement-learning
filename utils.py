@@ -19,7 +19,7 @@ def max_frames():
 	"""Combines two frames into one by elementwise max. Used because some sprites don't show on all frames.
 	"""
 
-def frame_scip(k=4):
+def frame_skip(k=4):
 	"""The agent only observes every k'th frame, and every action is repeated k times"""
 
 class Annealer():
@@ -31,10 +31,10 @@ class Annealer():
 		self.period = float(period)
 
 	def linear(self, step):
-		if self.epsilon < self.end_value:
+		epsilon = self.initial_value - self.initial_value*step/self.period
+		if epsilon < self.end_value:
 			return self.end_value
-		self.epsilon = self.initial_value - self.initial_value*step/self.period
-		return self.epsilon
+		return epsilon
 
 class Experience_buffer():
 	""" Consists of a list of 'experience', each of which is a dict.
