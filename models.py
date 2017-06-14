@@ -55,12 +55,11 @@ class DQN(object):
 
         self.action = tf.argmax(self.Qout, axis=1, name='action')
 
-    def create_train_op(self, targetQPlaceholder, learning_rate):
+    def create_MSE_train_op(self, targetQPlaceholder, learning_rate):
         with tf.name_scope('loss'):
             self.loss = tf.reduce_mean(tf.square(targetQPlaceholder - self.qvalue)) 
 
         self.train_op = tf.train.RMSPropOptimizer(learning_rate).minimize(self.loss) 
-
 
 
 
