@@ -65,7 +65,7 @@ class Experience_buffer():
 
 		for item in batch:
 			# Make the data into an array
-			batch[item] = np.vstack(batch[item]) 
+			batch[item] = np.vstack(batch[item])
 			# Remove superfluous dimensions
 			batch[item] = np.squeeze(batch[item])
 		return batch
@@ -78,20 +78,22 @@ class Experience_buffer():
 		limit = 3
 		print('Test that buffer is limited to ' + str(limit))
 		buffer = Experience_buffer(limit)
+		obs = None
 		for i in range(5):
-			obs = i
+			obs = np.array([i])
 			experience = {'obs':obs, 'action':i, 'reward':i, 'next_obs':obs, 'done':i}
 			print(i, buffer.buffer_size())
 			buffer.add(experience)
-		
 		print('\nContent of buffer')
 		print(buffer)
 
-		print('Test 0d obs')
+		print('Test 1d obs')
+		print('obs.shape', obs.shape)
 		batch = buffer.sample(5)
 		print(type(batch['obs']))
 		print('Should not have superflouous dimensions')
 		print(batch['obs'].shape)
+		assert len(batch['obs'].shape) == 1, "batch['obs'] has wrong len!"
 		buffer.clear()
 		print('\nTest buffer.clear: len = ' + str(buffer.buffer_size()))
 
@@ -100,21 +102,26 @@ class Experience_buffer():
 			obs = np.array([i,i])
 			experience = {'obs':[obs], 'action':i, 'reward':i, 'next_obs':[obs], 'done':i}
 			buffer.add(experience)
-
 		batch = buffer.sample(5)
+		print('obs.shape', obs.shape)
 		print(type(batch['obs'])) 
 		print(batch['obs'].shape)
+		assert len(batch['obs'].shape) == 2, "batch['obs'] has wrong len!"
 		buffer.clear()
 
-		print('\nTest 2d obs')
+		print("NB: 2d obs shouldn't exist!!")
+		print()
+
+		print('\nTest 3d obs')
 		for i in range(5):
-			obs = np.array([[i,i], [i,i]])
+			obs = np.array([[[i,i], [i,i]], [[i,i], [i,i]]])
 			experience = {'obs':[obs], 'action':i, 'reward':i, 'next_obs':[obs], 'done':i}
 			buffer.add(experience)
-
 		batch = buffer.sample(5)
+		print('obs.shape', obs.shape)
 		print(type(batch['obs']))
 		print(batch['obs'].shape)
+		assert len(batch['obs'].shape) == 4, "batch['obs'] has wrong len!"
 		print()
 
 
@@ -135,10 +142,10 @@ class ObsBuffer():
 		self.obs_shape = obs_shape
 		self.obs_dim = len(obs_shape)
 		self.buffer_size = buffer_size
-		if self.obs_dim != 2:
+		if self.obs_dim != 3:
 			assert self.buffer_size == 1, 'ERROR: ObsBuffer: buffer_size '\
 				+ 'must be 1 when obs_dim != 3.\n'+ 'buffer_size: ' \
-				+ str(self.buffer_size) + 'obs_dim: ' + str(self.obs_dim)
+				+ str(self.buffer_size) + '. obs_dim: ' + str(self.obs_dim)
 
 		# Initialize an empty buffer
 		self.buffer = []
@@ -164,6 +171,8 @@ class ObsBuffer():
 			return self.buffer[0]
 		elif self.obs_dim == 3: # 2D input
 			return np.dstack(self.buffer)
+		else:
+			raise Exception('ERROR: ObsBuffer.get(): self.obs_dim == ' + str(self.obs_dim))
 	
 	def reset(self):
 		""" Fill the buffer with zeros
@@ -233,17 +242,17 @@ class Preprocessor_2d():
 		if len(img.shape)==3:
 			img = np.mean(img, -1)
 			 # pre = pre.convert('L') # Alternative way, more fancy, but probably worse
-		if len(img.shape)==2:
-			img = np.expand_dims(img, axis=-1)
 		return img
 		
 	def process(self, obs):
 		pre = toimage(obs)
-		pre = pre.resize(self.out_shape)
+		pre = pre.resize(self.out_shape[:2])
 		pre = fromimage(pre)
 		if self.gray:
 			pre = self._make_gray(pre)
 		# For consistency an image ALWAYS has dimensions [w, h, c]!
+		if len(pre.shape)==2:
+			pre = np.expand_dims(pre, axis=-1)
 		assert len(pre.shape)==3, "ERROR: Preprocessor_2d: pre has dim: " + str(pre.shape)
 		return pre
 
@@ -349,10 +358,10 @@ class EnvironmentInterface():
 
 
 if __name__=='__main__':
-	# Experience_buffer().test()
+	Experience_buffer().test()
 	ObsBuffer([1], 1).test()
-	# Preprocessor_2d(None).test()
-	# EnvironmentInterface().test()
+	Preprocessor_2d(None).test()
+	EnvironmentInterface().test()
 	plt.show()
 
 
