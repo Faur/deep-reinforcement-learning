@@ -78,8 +78,8 @@ class Experience_buffer():
 				add
 				sample
 		"""
-		print('Testing Experience_buffer')
-
+		print('\n##############################################################################')
+		print('TEST: Experience_buffer\n')
 		limit = 3
 		print('Test that buffer is limited to ' + str(limit))
 		buffer = Experience_buffer(limit)
@@ -124,85 +124,108 @@ class Experience_buffer():
 		print(batch['obs'].shape)
 		print()
 
-class DataHandler():	
-	def __init__(self):
-		self.preprocessing_2d_defined = False
-		self.buffer = []
+class ObsBuffer():
+	""" Buffer for when multiple information from multiple timeframes are
+		used as a single input to the network.
 
+		Methods:
+		* add(obs):	Adds obs to the buffer, and removes the oldest
+		* get(): 	Returns buffer as a depth stacked numpy array
+		* reset(): 	Fills the buffer with zeros
+	"""
+	def __init__(self, obs_shape, buffer_size):
+		self.obs_shape = obs_shape
+		self.buffer_size = buffer_size
+
+		# Initialize an empty buffer
+		self.buffer = []
+		self.reset()
+	
+	def add(self, obs):
+		self.buffer.append(obs)
+		# Remove excess obs
+		while len(self.buffer) > self.buffer_size:
+			self.buffer.pop(0)
+
+	def get(self):
+		# TODO: Generalize: This only handles images ATM
+		return np.dstack(self.buffer)
+	
+	def reset(self):
+		self.buffer = [np.zeros(self.obs_shape) \
+			for i in range(self.buffer_size)]
+
+	def test(self):
+		print('\n##############################################################################')
+		print('TEST: ObsBuffer\n')
+
+		obs = np.ones([10, 10, 1])
+		obsBuf = ObsBuffer([10, 10], 4)
+		print('obsBuf.buffer   ', type(obsBuf.buffer), len(obsBuf.buffer))
+		print('obsBuf.buffer[0]', type(obsBuf.buffer[0]), obsBuf.buffer[0].shape)
+		print('obsBuf.get      ', type(obsBuf.get()), obsBuf.get().shape)
+		print()
+		print('sum            ', np.sum(obsBuf.get()))
+		obsBuf.add(obs)
+		obsBuf.add(obs)
+		obsBuf.add(obs)
+		obsBuf.add(obs)
+		obsBuf.add(obs)
+		print('sum after add  ', np.sum(obsBuf.get()))
+		obsBuf.reset()
+		print('sum after reset', np.sum(obsBuf.get()))
+		print()
+
+class Preprocessor_2d():	
+	""" Preprocessor intended for images.
+
+		Assumptions:
+		* Images are either RGB or grayscale. Thus valid shapes are 
+			[w, h, 1] and [w, h, 3]
+
+		Args:
+		* out_shape: List with [width, height] that the obs should be stretched to fit
+
+		Methods:
+	"""
+	def __init__(self, out_shape, gray=False):
+		self.out_shape = out_shape
+		self.gray = gray
+		self.n_channels = 1 if self.gray else 3
+		
 	def _make_gray(self, img):
 		if len(img.shape)==3:
 			img = np.mean(img, -1)
 			 # pre = pre.convert('L') # Alternative way, more fancy, but probably worse
 		if len(img.shape)==2:
 			img = np.expand_dims(img, axis=-1)
-		# For consistency an image ALWAYS has dimensions [w, h, c]!
-		assert len(img.shape)==3, "WARNING: _make_gray: img has dim: " + str(img.shape)
 		return img
 		
-	def define_preprocess_2d(self, target_size, num_frames=1, gray=False):
-		"""
-			Args:
-				target_size: List with [width, height] that the game should be stretched to fit
-		"""
-		self.num_frames = num_frames
-		self.target_size = target_size
-		self.gray = gray
-		self.n_channels = 1 if self.gray else 3
-		
-		 # Fill the buffer with zeros
-		self.reset_buffer_2d()
-
-		self.preproces_2d_defined = True		
-	
-	def preprocess_2d(self, obs):
-		assert self.preproces_2d_defined, "ERROR: You must run define_preprocessing_2d before running preprocessing_2d!"
+	def process(self, obs):
 		pre = toimage(obs)
-		pre = pre.resize(self.target_size)
+		pre = pre.resize(self.out_shape)
 		pre = fromimage(pre)
 		if self.gray:
 			pre = self._make_gray(pre)
+		# For consistency an image ALWAYS has dimensions [w, h, c]!
+		assert len(pre.shape)==3, "ERROR: Preprocessor_2d: pre has dim: " + str(pre.shape)
 		return pre
-	
-	def add_2d(self, obs):
-		""" Buffer holding self.num_frames"""
-		self.buffer.pop(0)
-		pre = self.preprocess_2d(obs)
-		self.buffer.append(pre)
-
-	def get_buffer_2d(self):
-		"""Returns buffer as a vertically stacked numpy array"""
-		return np.dstack(self.buffer)
-	
-	def reset_buffer_2d(self):
-		self.buffer = [np.zeros(self.target_size+[self.n_channels]) \
-			for i in range(self.num_frames)]
-
 
 	def test(self):
+		print('\n##############################################################################')
+		print('TEST: Preprocessor_2d\n')
 		# get an observation
 		import gym
 		env = gym.make('Breakout-v0')
 		obs = env.reset()
-		
-		# Create preprocessor
-		preprocessor = DataHandler()
-		preprocessor.define_preprocess_2d(target_size=[84,84], num_frames=4, gray=True)
+		preprocessor = Preprocessor_2d(out_shape=[84,84], gray=True)
 
 		print('Test preprocessing step')
-		pre = preprocessor.preprocess_2d(obs)
+		pre = preprocessor.process(obs)
 		print('obs', type(obs), obs.shape, np.product(obs.shape))
 		print('pre', type(pre), end=' ')
 		print(pre.shape, np.product(pre.shape))
 		print((1.*np.product(pre.shape))/np.product(obs.shape), '% of original')
-		print()
-
-		print('Test buffer')
-		preprocessor.add_2d(obs)
-		preprocessor.add_2d(obs)
-		pre_buffer = preprocessor.get_buffer_2d()
-		print('env_handler.buffer', type(preprocessor.buffer), len(preprocessor.buffer))
-		print('env_handler.buffer[0]', type(preprocessor.buffer[0]), preprocessor.buffer[0].shape)
-		print('pre_buffer', type(pre_buffer), pre_buffer.shape)
 		print()
 
 		# Visualize preprocessing
@@ -212,16 +235,13 @@ class DataHandler():
 		ax[0].set_title('Original')
 		ax[1].imshow(np.squeeze(pre), cmap='gray')
 		ax[1].set_title('After Preprocessing')
-		# plt.show()
-		plt.draw()
+		plt.show()
+
 
 if __name__=='__main__':
-	print('##############################################################################')
-	print('TEST: DataHandler\n')
-	DataHandler().test()
-
-	print('\n##############################################################################')
-	print('TEST: Experience_buffer\n')
 	Experience_buffer().test()
+	ObsBuffer([1], 1).test()
+	Preprocessor_2d(None).test()
+
 
 
