@@ -6,27 +6,6 @@ from PIL import Image
 from scipy.misc import toimage, fromimage
 
 
-
-def clip_rewards():
-	""" Clip rewards between [-1, 1]"""
-
-def crop():
-	pass
-
-def remove_color():
-	"""
-	Input: [w, h, c]
-
-	Output: [w, h, 1]
-	"""
-
-def max_frames():
-	"""Combines two frames into one by elementwise max. Used because some sprites don't show on all frames.
-	"""
-
-def frame_skip(k=4):
-	"""The agent only observes every k'th frame, and every action is repeated k times"""
-
 class Annealer():
 	"""Simple class that helps with annealing"""
 	def __init__(self, initial_value, end_value, period):
