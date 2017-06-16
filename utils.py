@@ -20,6 +20,7 @@ class Annealer():
 			return self.end_value
 		return epsilon
 
+
 class Experience_buffer():
 	""" Consists of a list of 'experience', each of which is a dict.
 		The keys should be the same for experience, but are not set in advance
@@ -67,16 +68,10 @@ class Experience_buffer():
 			batch[item] = np.vstack(batch[item]) 
 			# Remove superfluous dimensions
 			batch[item] = np.squeeze(batch[item])
-
 		return batch
 				
 	def test(self):
 		""" Simple test, validating that the replay buffer works
-			Tests the following features:
-				__str__
-				buffer_size
-				add
-				sample
 		"""
 		print('\n##############################################################################')
 		print('TEST: Experience_buffer\n')
@@ -100,7 +95,6 @@ class Experience_buffer():
 		buffer.clear()
 		print('\nTest buffer.clear: len = ' + str(buffer.buffer_size()))
 
-
 		print('\nTest 1d obs')
 		for i in range(5):
 			obs = np.array([i,i])
@@ -112,7 +106,6 @@ class Experience_buffer():
 		print(batch['obs'].shape)
 		buffer.clear()
 
-
 		print('\nTest 2d obs')
 		for i in range(5):
 			obs = np.array([[i,i], [i,i]])
@@ -123,6 +116,7 @@ class Experience_buffer():
 		print(type(batch['obs']))
 		print(batch['obs'].shape)
 		print()
+
 
 class ObsBuffer():
 	""" Buffer for when multiple information from multiple timeframes are
@@ -163,9 +157,9 @@ class ObsBuffer():
 		obsBuf = ObsBuffer([10, 10], 4)
 		print('obsBuf.buffer   ', type(obsBuf.buffer), len(obsBuf.buffer))
 		print('obsBuf.buffer[0]', type(obsBuf.buffer[0]), obsBuf.buffer[0].shape)
-		print('obsBuf.get      ', type(obsBuf.get()), obsBuf.get().shape)
+		print('obsBuf.get	  ', type(obsBuf.get()), obsBuf.get().shape)
 		print()
-		print('sum            ', np.sum(obsBuf.get()))
+		print('sum			', np.sum(obsBuf.get()))
 		obsBuf.add(obs)
 		obsBuf.add(obs)
 		obsBuf.add(obs)
@@ -175,6 +169,7 @@ class ObsBuffer():
 		obsBuf.reset()
 		print('sum after reset', np.sum(obsBuf.get()))
 		print()
+
 
 class Preprocessor_2d():	
 	""" Preprocessor intended for images.
@@ -230,18 +225,102 @@ class Preprocessor_2d():
 
 		# Visualize preprocessing
 		fig, ax = plt.subplots(1,2)
-		fig.suptitle('Preprocessor test')
+		fig.suptitle('Preprocessor_2d test')
 		ax[0].imshow(obs)
 		ax[0].set_title('Original')
 		ax[1].imshow(np.squeeze(pre), cmap='gray')
 		ax[1].set_title('After Preprocessing')
-		plt.show()
+		plt.draw()
+
+
+class EnvironmentInterface():
+	def __init__(self, preprocessor=None, action_repeats=1, merge_frames=False, clip_reward=None):
+		""" 
+			Arguments:
+			* clip_rewards: None --> Don't clip. Otherwise list of [low, high]
+				List can contain None, to remove clippage.
+		"""
+		self.preprocessor = preprocessor
+		self.action_repeats = action_repeats
+		self.merge_frames = merge_frames
+		
+		if clip_reward is None:
+			self.clip = lambda x: x
+		else:
+			self.clip = lambda x: np.clip(x, clip_reward[0], clip_reward[1])
+
+		if self.merge_frames:
+			assert self.action_repeats > 1, 'ERROR: EnvironmentInterface: '\
+				+ 'Cannot merge frames with action_repeats !> 1.'\
+				+ 'action_repeats = ' + str(self.action_repeats)
+
+	def take_action(self, action, env):
+		""" Take an action self.action_repeats times, and return an
+			(optionally) preprocessed obs
+		"""
+		obs = None
+		prev_obs = obs
+		total_reward = 0
+		done = False
+		info = ''
+
+		# Repeat action self.action_repeats times
+		for i in range(self.action_repeats):
+			prev_obs = obs
+			obs, reward, done, info = env.step(action)
+			reward = self.clip(reward) # Only clips if self.clip is defined! See __init__
+			total_reward += reward
+			if done: break
+
+		if self.merge_frames:
+			obs = np.maximum(obs, prev_obs)
+
+		if self.preprocessor is not None:
+			obs = self.preprocessor.process(obs)
+
+		return obs, total_reward, done, info
+	
+	def reset_env(self, env):
+		"""Simple wrapper that restarts the environment"""
+		obs = env.reset()
+		episode_time_step = 0
+		episode_reward = 0
+		
+		if self.preprocessor is not None:
+			obs = self.preprocessor.process(obs)
+		return obs, episode_time_step, episode_reward
+
+	def test(self):
+		print('\n##############################################################################')
+		print('TEST: EnvironmentInterface\n')
+		import gym
+		env = gym.make('Breakout-v0')
+		preprocessor = Preprocessor_2d([84, 84], gray=True)
+
+		envInter = EnvironmentInterface(preprocessor=preprocessor, action_repeats=4, merge_frames=True, clip_reward=[-1,1])
+
+		obs, eps_r, eps_t = envInter.reset_env(env)
+		print('obs from reset_env: ', type(obs), obs.shape)
+		fig, ax = plt.subplots(2,2)
+		fig.suptitle('EnvironmentInterface test')
+		for i in range(2):
+			for j in range(2):
+				obs, reward, done, info = envInter.take_action(1, env)
+				ax[i][j].imshow(np.squeeze(obs), cmap='gray')
+				ax[i][j].set_title('t = ' + str(5 - i*2 - j))
+				ax[i][j].axis('off')
+		fig.tight_layout()
+
+		print('obs from take_action: ', type(obs), obs.shape)
+
+		plt.draw()
 
 
 if __name__=='__main__':
 	Experience_buffer().test()
 	ObsBuffer([1], 1).test()
 	Preprocessor_2d(None).test()
-
+	EnvironmentInterface().test()
+	plt.show()
 
 
