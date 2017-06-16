@@ -122,6 +122,10 @@ class ObsBuffer():
 	""" Buffer for when multiple information from multiple timeframes are
 		used as a single input to the network.
 
+		Arguments:
+		* obs_shape: The shape of the individual observations, NOT the 
+					 input shape to the final network!
+
 		Methods:
 		* add(obs):	Adds obs to the buffer, and removes the oldest
 		* get(): 	Returns buffer as a depth stacked numpy array
