@@ -135,9 +135,10 @@ class ObsBuffer():
 		self.obs_shape = obs_shape
 		self.obs_dim = len(obs_shape)
 		self.buffer_size = buffer_size
-		if self.obs_dim != 3: # obs_dim == 3 --> image
+		if self.obs_dim != 2:
 			assert self.buffer_size == 1, 'ERROR: ObsBuffer: buffer_size '\
-				+ 'must be 1 when obs_dim != 3. is ' + str(self.buffer_size)
+				+ 'must be 1 when obs_dim != 3.\n'+ 'buffer_size: ' \
+				+ str(self.buffer_size) + 'obs_dim: ' + str(self.obs_dim)
 
 		# Initialize an empty buffer
 		self.buffer = []
