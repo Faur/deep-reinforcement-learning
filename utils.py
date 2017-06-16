@@ -131,25 +131,42 @@ class ObsBuffer():
 		* get(): 	Returns buffer as a depth stacked numpy array
 		* reset(): 	Fills the buffer with zeros
 	"""
-	def __init__(self, obs_shape, buffer_size):
+	def __init__(self, obs_shape, buffer_size=1):
 		self.obs_shape = obs_shape
+		self.obs_dim = len(obs_shape)
 		self.buffer_size = buffer_size
+		if self.obs_dim != 3: # obs_dim == 3 --> image
+			assert self.buffer_size == 1, 'ERROR: ObsBuffer: buffer_size '\
+				+ 'must be 1 when obs_dim != 3. is ' + str(self.buffer_size)
 
 		# Initialize an empty buffer
 		self.buffer = []
 		self.reset()
 	
 	def add(self, obs):
+		assert type(obs) is np.ndarray, 'ERROR: ObsBuffer: obs must be an np.ndarray'
 		self.buffer.append(obs)
 		# Remove excess obs
 		while len(self.buffer) > self.buffer_size:
 			self.buffer.pop(0)
 
 	def get(self):
-		# TODO: Generalize: This only handles images ATM
-		return np.dstack(self.buffer)
+		""" for 1D obs output is
+				obs_shape
+			for 2D obs output is
+				obs_shape + [buffer_size]
+		"""
+		# TODO: This is kinda shit?
+		if self.obs_dim == 1: # 1D input
+			assert self.buffer_size == 1, "ERROR: ObsBuffer: self.buffer_size != 1."\
+				+ ' For 1D obs'
+			return self.buffer[0]
+		elif self.obs_dim == 3: # 2D input
+			return np.dstack(self.buffer)
 	
 	def reset(self):
+		""" Fill the buffer with zeros
+		"""
 		self.buffer = [np.zeros(self.obs_shape) \
 			for i in range(self.buffer_size)]
 
@@ -157,19 +174,38 @@ class ObsBuffer():
 		print('\n##############################################################################')
 		print('TEST: ObsBuffer\n')
 
-		obs = np.ones([10, 10, 1])
-		obsBuf = ObsBuffer([10, 10], 4)
+		print('1D obs')
+		obs_shape = [10]
+		buf_size = 1
+		obs = np.ones(obs_shape)
+		obsBuf = ObsBuffer(obs_shape, buf_size)
 		print('obsBuf.buffer   ', type(obsBuf.buffer), len(obsBuf.buffer))
 		print('obsBuf.buffer[0]', type(obsBuf.buffer[0]), obsBuf.buffer[0].shape)
-		print('obsBuf.get	  ', type(obsBuf.get()), obsBuf.get().shape)
+		print('obsBuf.get      ', type(obsBuf.get()), obsBuf.get().shape)
+		print('^^^ shoudl be:  ', obs_shape[:-1] + [obs_shape[-1]*buf_size])
+		print('sum before add  ', np.sum(obsBuf.get()))
+		obsBuf.add(obs)
+		print('sum after add   ', np.sum(obsBuf.get()))
+		obsBuf.reset()
+		print('sum after reset', np.sum(obsBuf.get()))
 		print()
-		print('sum			', np.sum(obsBuf.get()))
+
+		print('2D obs')
+		obs_shape = [10, 10, 2]
+		buf_size = 4
+		obs = np.ones(obs_shape)
+		obsBuf = ObsBuffer(obs_shape, buf_size)
+		print('obsBuf.buffer   ', type(obsBuf.buffer), len(obsBuf.buffer))
+		print('obsBuf.buffer[0]', type(obsBuf.buffer[0]), obsBuf.buffer[0].shape)
+		print('obsBuf.get      ', type(obsBuf.get()), obsBuf.get().shape)
+		print('^^^ shoudl be:  ', obs_shape[:-1] + [obs_shape[-1]*buf_size])
+		print('sum before add  ', np.sum(obsBuf.get()))
 		obsBuf.add(obs)
 		obsBuf.add(obs)
 		obsBuf.add(obs)
 		obsBuf.add(obs)
 		obsBuf.add(obs)
-		print('sum after add  ', np.sum(obsBuf.get()))
+		print('sum after add   ', np.sum(obsBuf.get()))
 		obsBuf.reset()
 		print('sum after reset', np.sum(obsBuf.get()))
 		print()
@@ -238,21 +274,13 @@ class Preprocessor_2d():
 
 
 class EnvironmentInterface():
-	def __init__(self, preprocessor=None, action_repeats=1, merge_frames=False, clip_reward=None):
+	def __init__(self, preprocessor=None, action_repeats=1, merge_frames=False):
 		""" 
-			Arguments:
-			* clip_rewards: None --> Don't clip. Otherwise list of [low, high]
-				List can contain None, to remove clippage.
 		"""
 		self.preprocessor = preprocessor
 		self.action_repeats = action_repeats
 		self.merge_frames = merge_frames
 		
-		if clip_reward is None:
-			self.clip = lambda x: x
-		else:
-			self.clip = lambda x: np.clip(x, clip_reward[0], clip_reward[1])
-
 		if self.merge_frames:
 			assert self.action_repeats > 1, 'ERROR: EnvironmentInterface: '\
 				+ 'Cannot merge frames with action_repeats !> 1.'\
@@ -272,7 +300,6 @@ class EnvironmentInterface():
 		for i in range(self.action_repeats):
 			prev_obs = obs
 			obs, reward, done, info = env.step(action)
-			reward = self.clip(reward) # Only clips if self.clip is defined! See __init__
 			total_reward += reward
 			if done: break
 
@@ -284,7 +311,7 @@ class EnvironmentInterface():
 
 		return obs, total_reward, done, info
 	
-	def reset_env(self, env):
+	def reset(self, env):
 		"""Simple wrapper that restarts the environment"""
 		obs = env.reset()
 		episode_time_step = 0
@@ -301,10 +328,10 @@ class EnvironmentInterface():
 		env = gym.make('Breakout-v0')
 		preprocessor = Preprocessor_2d([84, 84], gray=True)
 
-		envInter = EnvironmentInterface(preprocessor=preprocessor, action_repeats=4, merge_frames=True, clip_reward=[-1,1])
+		envInter = EnvironmentInterface(preprocessor=preprocessor, action_repeats=4, merge_frames=True)
 
-		obs, eps_r, eps_t = envInter.reset_env(env)
-		print('obs from reset_env: ', type(obs), obs.shape)
+		obs, eps_r, eps_t = envInter.reset(env)
+		print('obs from reset: ', type(obs), obs.shape)
 		fig, ax = plt.subplots(2,2)
 		fig.suptitle('EnvironmentInterface test')
 		for i in range(2):
@@ -321,10 +348,10 @@ class EnvironmentInterface():
 
 
 if __name__=='__main__':
-	Experience_buffer().test()
+	# Experience_buffer().test()
 	ObsBuffer([1], 1).test()
-	Preprocessor_2d(None).test()
-	EnvironmentInterface().test()
+	# Preprocessor_2d(None).test()
+	# EnvironmentInterface().test()
 	plt.show()
 
 
