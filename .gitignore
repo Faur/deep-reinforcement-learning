@@ -1,6 +1,5 @@
 # Custom files that should be ignored
 logdir/*
-train_*
 
 
 # Byte-compiled / optimized / DLL files
