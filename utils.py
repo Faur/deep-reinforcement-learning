@@ -1,6 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy.misc import toimage, fromimage
@@ -359,6 +361,7 @@ class EnvironmentInterface():
 		print('obs from take_action: ', type(obs), obs.shape)
 
 		plt.draw()
+
 
 
 if __name__=='__main__':
