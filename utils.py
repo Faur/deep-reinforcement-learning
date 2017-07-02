@@ -4,6 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy.misc import toimage, fromimage
+import datetime, time
+
+def time_str():
+    return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-(%H-%M-%S)')
 
 
 class Annealer():
@@ -358,6 +362,7 @@ class EnvironmentInterface():
 
 
 if __name__=='__main__':
+	print('Experiment start' + current_time)
 	Experience_buffer().test()
 	ObsBuffer([1], 1).test()
 	Preprocessor_2d(None).test()

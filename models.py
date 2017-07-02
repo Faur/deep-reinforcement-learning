@@ -61,6 +61,26 @@ class DQN(object):
 
         self.train_op = tf.train.RMSPropOptimizer(learning_rate).minimize(self.loss) 
 
+class Worker(object):
+    """ Class that handles training and logging """
+    def __init__(self, env, id, model, model_path, logdir='logdir'):
+        self.env = env
+        self.name = 'worker_' + str(id)
+        self.id = id
+        self.model = model
+        self.model_path = model_path
+        self.logdir = logdir
+        self.summary_writer = tf.summary.FileWriter(
+            os.path.join(self.logdir, "train_"+str(self.id)))
+
+    def train(self, rollout, sess, gamma, bootstrap_value):
+        """ Apply one minibatch of updates"""
+        pass
+
+    def work(self):
+        """ Train the network """
+        pass
+
 
 
 if __name__ == '__main__':
