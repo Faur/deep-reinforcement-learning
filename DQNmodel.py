@@ -219,7 +219,7 @@ class Trainer(object):
 
                 ## Track training
                 if self.frame % self.track_interval == 0:
-                    if (self.frame % (self.track_interval*10)==0) and (self.frame>0):
+                    if (self.frame % (self.track_interval*10)==0) and (self.frame>self.minimum_experience):
                         i = training_summaries['num_ep']
                         model_save_str = self.logdir+'/model-'+str(i)+'.cptk'
                         self.saver.save(sess, model_save_str)
