@@ -140,7 +140,7 @@ class Trainer(object):
         try:
             while self.should_run:
                 if self.frame == self.minimum_experience:
-                    print('___/// BEGIN TRAINING \\\___')
+                    print('\n\n___/// BEGIN TRAINING \\\___')
 
                 epsilon = self.annealer.linear(self.frame - self.minimum_experience)
 
@@ -226,7 +226,7 @@ class Trainer(object):
                         print("Saved Model: " + model_save_str)
         #                 break
 
-                    if self.frame % (self.track_interval*10) == 0:
+                    if self.frame % (self.track_interval*25) == 0:
                         print('\n{:22} {:>9}  {:>7}  {:>7}  {:>7}'.format(
                             'time', 'frames', 'epis', 'reward', 'epsilon'))
                     else:
