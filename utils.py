@@ -11,6 +11,12 @@ import datetime, time
 def time_str():
     return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-(%H-%M-%S)')
 
+def print_attributes(C):
+	print(C.__name__, 'attribures:')
+	for v in vars(C):
+		if not v.startswith('__'):
+			print('\t', v)
+			
 
 class Annealer():
 	"""Simple class that helps with annealing"""
@@ -36,7 +42,7 @@ class Experience_buffer():
 		self.buffer_capacity = buffer_capacity
 	
 	def __str__(self):
-		""" Simply print the content of the buffer"""
+		""" Simply the content of the buffer"""
 		tostr = ''
 		for item in self.buffer:
 			tostr += item.__str__()
