@@ -9,32 +9,6 @@ from tensorflow.contrib.keras.api.keras.models import Model
 
 import utils
 
-def model_DQN(input_ph):
-    # TODO: Check if the None from the batch size should be excluded in input_ph!
-    with tf.name_scope('DQN'):
-        input_layer = Input(tensor=input_ph)
-        x = Conv2D(32, (8,8), (4,4), activation='relu', name='Conv1')(input_layer)
-        x = Conv2D(64, (4,4), (2,2), activation='relu', name='Conv2')(x)
-        x = Conv2D(64, (3,3), (1,1), activation='relu', name='Conv3')(x)
-        x = Flatten()(x)
-        x = Dense(512, activation='relu', name='Dense1')(x)
-
-        model = Model(inputs=input_layer, outputs=x)
-
-        return model
-
-def model_dense(input_ph, layers, activation='relu',):
-    with tf.name_scope('simpleDense'):
-        input_layer = Input(tensor=input_ph)
-        x = input_layer
-        for i in range(len(layers)):
-            name = 'Dense'+str(i)
-            x = Dense(layers[i], activation=activation, name=name)(x)
-
-        model = Model(inputs=input_layer, outputs=x)
-
-        return model
-
 class DQN(object):
     """docstring for DQN"""
     def __init__(self, model_type, obsPlaceholder, actionPlaceholder, a_size):
