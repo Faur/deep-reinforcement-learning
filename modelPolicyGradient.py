@@ -15,26 +15,27 @@ import networks
 import Logger
 
 class PolicyGradient:
-    def __init__(self, config, learning_rate, logdir, max_train_frame=1e6, render=False):
+    def __init__(self, config, logdir, learning_rate, max_train_frame=1e6, render=False):
+        self.should_stop = False
         self.frame = 0
         self.episode = 0
         self.train_interval = 1 # episodes
 
         self.config = config
         self.logdir = logdir
+        self.learning_rate = learning_rate
         self.max_train_frame = max_train_frame
-        self.annealer = utils.Annealer(learning_rate, 0, self.max_train_frame)
 
-        self.env = gym.make(self.config.env_name)
         self.render = render
-        self.should_stop = False
         
         self.obsPH = tf.placeholder(tf.float32, shape=[None]+[self.config.num_state], name='obsPlaceholder')
         self.actionPH = tf.placeholder(tf.int32, shape=[None], name='actionPlaceholder')
-        self.advantagePH = tf.placeholder(tf.float32, shape=[None], name='advantagePlaceholder')
         self.learningRatePH = tf.placeholder(tf.float32, shape=[], name='learningratePlaceholder')
+        self.advantagePH = tf.placeholder(tf.float32, shape=[None], name='advantagePlaceholder')
 
     def build(self):
+        self.env = gym.make(self.config.env_name)
+        self.annealer = utils.Annealer(self.learning_rate, 0, self.max_train_frame)
         self.model = self._build_model()
         self.graph = self._build_graph(self.learningRatePH)
 
@@ -52,8 +53,8 @@ class PolicyGradient:
         return model
 
     def _build_graph(self, learning_rate):
-        class PGGraph: pass
-        graph = PGGraph
+        class Graph: pass
+        graph = Graph
 
         action_hot = tf.one_hot(self.actionPH, self.config.num_action)
         with tf.variable_scope('actor'):
@@ -104,8 +105,11 @@ class PolicyGradient:
         return graph
                     
     def load_model(self, path):
-        ckpt = tf.train.get_checkpoint_state(path)
-        self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+        try:                
+            ckpt = tf.train.get_checkpoint_state(path)
+            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+        except:
+            print("Could not find model to load.")
     
     def save_model(self, path):
         self.saver.save(self.sess, path)
@@ -203,12 +207,8 @@ class PolicyGradient:
 
         self.env.render(close=True)
     
-    def run(self, load_model=False):        
-        try:
-            if load_model:
-                self.load_model(self.logdir)
-        except:
-            print("Could not find model to load.")
+    def run(self, load_model=False):
+        if load_model: self.load_model(self.logdir)
         
         done = False
         obs = self.env.reset()
