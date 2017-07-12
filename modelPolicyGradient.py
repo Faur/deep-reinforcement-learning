@@ -10,30 +10,26 @@ from tensorflow.contrib.keras.api.keras.models import Model
 from matplotlib.font_manager import FontProperties
 
 # Custom libraries
-import CartPole_config as config
 import utils
 import networks
 import Logger
 
-    
-## Create model
-tf.reset_default_graph()
-
 class PolicyGradient:
-    def __init__(self, learning_rate, logdir, max_train_frame=1e6, render=False):
+    def __init__(self, config, learning_rate, logdir, max_train_frame=1e6, render=False):
         self.frame = 0
         self.episode = 0
         self.train_interval = 1 # episodes
 
+        self.config = config
         self.logdir = logdir
         self.max_train_frame = max_train_frame
         self.annealer = utils.Annealer(learning_rate, 0, self.max_train_frame)
-        
-        self.env = gym.make(config.env_name)
+
+        self.env = gym.make(self.config.env_name)
         self.render = render
         self.should_stop = False
         
-        self.obsPH = tf.placeholder(tf.float32, shape=[None]+[config.num_state], name='obsPlaceholder')
+        self.obsPH = tf.placeholder(tf.float32, shape=[None]+[self.config.num_state], name='obsPlaceholder')
         self.actionPH = tf.placeholder(tf.int32, shape=[None], name='actionPlaceholder')
         self.advantagePH = tf.placeholder(tf.float32, shape=[None], name='advantagePlaceholder')
         self.learningRatePH = tf.placeholder(tf.float32, shape=[], name='learningratePlaceholder')
@@ -51,7 +47,7 @@ class PolicyGradient:
 
     def _build_model(self):
         input_layer = Input(tensor=self.obsPH)
-        model_layers = networks.build_dense(input_layer, config.layers, name_stem='dense_')
+        model_layers = networks.build_dense(input_layer, self.config.layers, name_stem='dense_')
         model = Model(inputs=input_layer, outputs=model_layers)
         return model
 
@@ -59,9 +55,9 @@ class PolicyGradient:
         class PGGraph: pass
         graph = PGGraph
 
-        action_hot = tf.one_hot(self.actionPH, config.num_action)
+        action_hot = tf.one_hot(self.actionPH, self.config.num_action)
         with tf.variable_scope('actor'):
-            logits = Dense(config.num_action, activation='linear')(self.model.output)
+            logits = Dense(self.config.num_action, activation='linear')(self.model.output)
             graph.action_probs = tf.nn.softmax(logits)
             graph.action_prob = tf.reduce_sum(graph.action_probs * action_hot,
                                     axis=1, keep_dims=True)
@@ -71,8 +67,8 @@ class PolicyGradient:
                 labels=action_hot, logits=logits)
             graph.loss_policy = tf.reduce_mean(graph.loss_policy * self.advantagePH)
             
-            graph.loss_entropy = config.loss_entropy_coef * tf.reduce_mean(
-                graph.action_probs * tf.log(graph.action_probs + config.eps))
+            graph.loss_entropy = self.config.loss_entropy_coef * tf.reduce_mean(
+                graph.action_probs * tf.log(graph.action_probs + self.config.eps))
 
             graph.loss_total = graph.loss_policy + graph.loss_entropy
             
@@ -123,7 +119,7 @@ class PolicyGradient:
         [p] = self.sess.run(
                 self.graph.action_probs,
                 feed_dict={self.obsPH : obs})
-        a = np.random.choice(config.num_action, p=p)
+        a = np.random.choice(self.config.num_action, p=p)
         return a
 
     def create_video(self, target, num_episodes=1, frame_duration=None, figsize=(8,4)):
@@ -149,7 +145,7 @@ class PolicyGradient:
                             self.graph.action_probs,
                             feed_dict={self.obsPH : [obs]})
                     action_prob.append(p[1])
-                    a = np.random.choice(config.num_action, p=p)
+                    a = np.random.choice(self.config.num_action, p=p)
                     action_chosen.append(a)
                     obs, reward, done, _ = self.env.step(a)
                     reward_sum += int(reward)
@@ -170,7 +166,7 @@ class PolicyGradient:
                     ax = fig.add_subplot(222)
                     plt.axis('off')
                     ax.text(0,0, ''
-                                +'\nEnvironment: ' + config.env_name
+                                +'\nEnvironment: ' + self.config.env_name
                                 # +'\nExperiment:  ' + experiment_name # Not available in this scope!
                                 +'\nNum. param.  ' + str(utils.num_trainable_param())                        
                                 +'\nStep:        ' + str(reward_sum)
@@ -237,13 +233,13 @@ class PolicyGradient:
                                            step=self.frame)
 
                     self.episode += 1                    
-                    if sum(rewards) >= config.env_max_step: # if we win make the advantage positive for all
+                    if sum(rewards) >= self.config.env_max_step: # if we win make the advantage positive for all
 #                         print('sum(rewards) =', sum(rewards))
                         dis_r = 0.01 * np.ones_like(rewards)
                         dis_r = list(dis_r)
                     else: # compute discounted rewards
 #                         print('Normal')
-                        dis_r = utils.discount_rewards(rewards, config.gamma)
+                        dis_r = utils.discount_rewards(rewards, self.config.gamma)
                         dis_r = list(dis_r)
                         
 #                     print('dis_r', type(dis_r), len(dis_r), type(dis_r[9]))
