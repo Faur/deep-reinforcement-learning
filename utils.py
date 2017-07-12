@@ -9,7 +9,7 @@ from scipy.misc import toimage, fromimage
 import datetime, time
 
 def time_str():
-    return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-(%H-%M-%S)')
+	return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-(%H-%M-%S)')
 
 def print_attributes(C):
 	print(C.__name__, 'attribures:')
@@ -18,17 +18,38 @@ def print_attributes(C):
 			print('\t', v)
 			
 def discount_rewards(r, gamma):
-    """ Takes the rewards of an entire episoe, and discounts them."""
-    discounted_r = np.zeros_like(r)
-    running_add = 0
-    for t in reversed(range(len(r))):
-        running_add = running_add * gamma + r[t]
-        discounted_r[t] = running_add
+	""" Takes the rewards of an entire episoe, and discounts them."""
+	discounted_r = np.zeros_like(r)
+	running_add = 0
+	for t in reversed(range(len(r))):
+		running_add = running_add * gamma + r[t]
+		discounted_r[t] = running_add
 
-    # TODO: assert that all the values aren't the same.. this messes things up for some reason
-    return discounted_r
+	# TODO: assert that all the values aren't the same.. this messes things up for some reason
+	return discounted_r
 
+def gif_from_figs(figs, target, duration=None):
+	import imageio
+	with imageio.get_writer(target, duration=None) as writer:
+		for i, f in enumerate(figs):
+			f.canvas.draw()
+			data = np.fromstring(f.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+			data = data.reshape(f.canvas.get_width_height()[::-1] + (3,))
+			writer.append_data(data)
 
+def num_trainable_param():
+	""" Counts the number of trainable parameters in the current graph
+		From: https://stackoverflow.com/a/38161314/3747801
+	"""
+	total_parameters = 0
+	for variable in tf.trainable_variables():
+		# shape is an array of tf.Dimension
+		shape = variable.get_shape()
+		variable_parametes = 1
+		for dim in shape:
+			variable_parametes *= dim.value
+		total_parameters += variable_parametes
+	return total_parameters
 
 class Annealer():
 	"""Simple class that helps with annealing"""
@@ -215,7 +236,7 @@ class ObsBuffer():
 		obsBuf = ObsBuffer(obs_shape, buf_size)
 		print('obsBuf.buffer   ', type(obsBuf.buffer), len(obsBuf.buffer))
 		print('obsBuf.buffer[0]', type(obsBuf.buffer[0]), obsBuf.buffer[0].shape)
-		print('obsBuf.get      ', type(obsBuf.get()), obsBuf.get().shape)
+		print('obsBuf.get	   ', type(obsBuf.get()), obsBuf.get().shape)
 		print('^^^ shoudl be:  ', obs_shape[:-1] + [obs_shape[-1]*buf_size])
 		print('sum before add  ', np.sum(obsBuf.get()))
 		obsBuf.add(obs)
@@ -231,7 +252,7 @@ class ObsBuffer():
 		obsBuf = ObsBuffer(obs_shape, buf_size)
 		print('obsBuf.buffer   ', type(obsBuf.buffer), len(obsBuf.buffer))
 		print('obsBuf.buffer[0]', type(obsBuf.buffer[0]), obsBuf.buffer[0].shape)
-		print('obsBuf.get      ', type(obsBuf.get()), obsBuf.get().shape)
+		print('obsBuf.get	   ', type(obsBuf.get()), obsBuf.get().shape)
 		print('^^^ shoudl be:  ', obs_shape[:-1] + [obs_shape[-1]*buf_size])
 		print('sum before add  ', np.sum(obsBuf.get()))
 		obsBuf.add(obs)
