@@ -17,6 +17,18 @@ def print_attributes(C):
 		if not v.startswith('__'):
 			print('\t', v)
 			
+def discount_rewards(r, gamma):
+    """ Takes the rewards of an entire episoe, and discounts them."""
+    discounted_r = np.zeros_like(r)
+    running_add = 0
+    for t in reversed(range(len(r))):
+        running_add = running_add * gamma + r[t]
+        discounted_r[t] = running_add
+
+    # TODO: assert that all the values aren't the same.. this messes things up for some reason
+    return discounted_r
+
+
 
 class Annealer():
 	"""Simple class that helps with annealing"""
