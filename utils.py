@@ -81,11 +81,17 @@ class Experience_buffer():
 			tostr += item.__str__()
 			tostr += '\n'
 		return tostr
-	
+
 	def buffer_size(self):
 		""" Return the current number of experiences in the buffer."""
 		return len(self.buffer)
 	
+	def is_full(self):
+		if self.buffer_size() >= self.buffer_capacity:
+			return True
+		else:
+			return False
+
 	def add(self, experience):
 		""" Add ONE experience to the experience buffer
 			Every entry in an expericen shold be i dimensional at most!
