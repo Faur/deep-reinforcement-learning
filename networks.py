@@ -12,7 +12,6 @@ from tensorflow.contrib.keras.api.keras.models import Model
 import utils
 
 def build_DQN(input_layer):
-    # TODO: Should conform to the 'layers-in-layers-out format'
     # with tf.name_scope('DQN'):
     # input_layer = Input(tensor=input_ph)
     x = Conv2D(32, (8,8), (4,4), activation='relu', name='Conv1')(input_layer)
