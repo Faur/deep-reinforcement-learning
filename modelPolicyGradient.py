@@ -119,14 +119,13 @@ class PolicyGradient:
 
     def get_action(self, obs):
         """ Takes a single obs, and returns a single action"""
-        obs = [obs]
         [p] = self.sess.run(
                 self.graph.action_probs,
                 feed_dict={self.obsPH : obs})
         a = np.random.choice(self.config.num_action, p=p)
         return a
 
-    def create_video(self, target, num_episodes=1, frame_duration=None, figsize=(8,4)):
+    def create_video(self, title, target, num_episodes=1, frame_duration=None, figsize=(8,4)):
         import imageio
 
         # Setup
@@ -169,7 +168,7 @@ class PolicyGradient:
 
                     ax = fig.add_subplot(222)
                     plt.axis('off')
-                    ax.text(0,0, ''
+                    ax.text(0,0, 'Title:         ' + title
                                 +'\nEnvironment: ' + self.config.env_name
                                 # +'\nExperiment:  ' + experiment_name # Not available in this scope!
                                 +'\nNum. param.  ' + str(utils.num_trainable_param())                        
@@ -218,8 +217,9 @@ class PolicyGradient:
             while self.should_stop is False:
                 self.frame += 1
                 
-                action = self.get_action(obs)
+                action = self.get_action([obs])
                 obs, reward, done, _ = self.env.step(action)
+                reward = np.clip(reward, -1, 1)
                 if self.render: self.env.render()
                 
                 # add experience to memory
@@ -251,7 +251,8 @@ class PolicyGradient:
                     done = False
                     obs = self.env.reset()
                 
-                    if self.episode % self.train_interval == 0:
+                    if self.episode % self.train_interval == 0: 
+                            # currently self.train_interval=1
                         assert len(experience[0]) == len(experience[1]), \
                             "Error: experience lenghts don't allign" + str([len(i) for i in experience])
                         assert len(experience[0]) == len(experience[2]), \
@@ -259,8 +260,7 @@ class PolicyGradient:
                         self.logger.log_scalar(tag='training/batch_size', 
                                            value=len(experience[0]),
                                            step=self.frame)
-
-                            
+ 
                         # stack experience
                         obs_stack = np.vstack(experience[0])
                         action_stack = np.vstack(experience[1])
@@ -287,20 +287,19 @@ class PolicyGradient:
                                            self.actionPH : action_stack,
                                            self.advantagePH : reward_stack,
                                            self.learningRatePH : self.annealer.linear(self.frame)})
-                        if self.episode % 25 == 0: # we don't actually want to store this much data!!
-                            self.logger.log_scalar('training/learning_rate', self.annealer.linear(self.frame), self.frame)
-                            self.summary_writer.add_summary(summary, self.frame)
-                        
-                        if self.episode % 500 == 0:
-                            print('{:8} model saved:'.format(self.frame), self.logdir)
-                            self.save_model(self.logdir + '/model_'+str(self.frame))
-                        
-                        if self.frame > self.max_train_frame:
-                            print('max_train_frame reached')
-                            self.should_stop = True
+
+                if self.episode % 25 == 0: # we don't actually want to store this much data!!
+                    self.logger.log_scalar('training/learning_rate', self.annealer.linear(self.frame), self.frame)
+                    self.summary_writer.add_summary(summary, self.frame)
                 
-#                         if frame > 5e5:
-#                             self.train_interval = 3
+                if self.episode % 500 == 0:
+                    print('{:8} model saved:'.format(self.frame), self.logdir)
+                    self.save_model(self.logdir + '/model_'+str(self.frame))
+                
+                if self.frame > self.max_train_frame:
+                    print('max_train_frame reached')
+                    self.should_stop = True
+                
                     
         except KeyboardInterrupt:
             print('KeyboardInterrupt')

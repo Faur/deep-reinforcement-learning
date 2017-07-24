@@ -10,7 +10,7 @@ from tensorflow.contrib.keras.api.keras.models import Model
 import utils
 
 class DQN(object):
-    """docstring for DQN"""
+    """docstring for DQN""" 
     def __init__(self, model_type, obsPlaceholder, actionPlaceholder, a_size):
         actions_onehot = tf.one_hot(actionPlaceholder, a_size, dtype=tf.float32, name='actionsOnehot')
 
@@ -76,7 +76,7 @@ class Trainer(object):
         trainables = tf.trainable_variables()
         self.targetOps = updateTargetGraph(trainables,tau)
 
-    def updateTarget(self, op_holder,sess):
+    def updateTarget(self, op_holder, sess):
         """ Stuff for updating the target graph """
         for op in op_holder:
             sess.run(op)
@@ -171,7 +171,7 @@ class Trainer(object):
                     loss, _ = sess.run([self.DQN1.loss, self.DQN1.train_op], feed_dict=DQN1_train_dict)
 
                     ## Update DQN2
-                    self.updateTarget(self.targetOps, sess)          
+                    self.updateTarget(self.targetOps, sess)
 
 
                 if ep_t > self.max_ep_t:
