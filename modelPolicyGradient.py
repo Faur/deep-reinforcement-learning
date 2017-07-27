@@ -240,6 +240,7 @@ class PolicyGradient:
                     else: # compute discounted rewards
 #                         print('Normal')
                         dis_r = utils.discount_rewards(rewards, self.config.gamma)
+                        dis_r = (dis_r - np.mean(dis_r))/np.std(dis_r) # normalize discounted reward
                         dis_r = list(dis_r)
                         
 #                     print('dis_r', type(dis_r), len(dis_r), type(dis_r[9]))
@@ -267,13 +268,13 @@ class PolicyGradient:
                         action_stack = np.squeeze(action_stack)
                         reward_stack = np.vstack(experience[2])
                         reward_stack = np.squeeze(reward_stack)
-                        # normalize discounted rewardrrrr
-                        
-                        reward_std = np.std(reward_stack)
-                        if np.abs(reward_std) > 1e6:
-                            reward_stack = (reward_stack - np.mean(reward_stack))/reward_std
-                        else:
-                            reward_stack = reward_stack - np.mean(reward_stack)
+
+                        ## normalize discounted reward
+                        # reward_std = np.std(reward_stack)
+                        # if np.abs(reward_std) > 1e6:
+                        #     reward_stack = (reward_stack - np.mean(reward_stack))/reward_std
+                        # else:
+                        #     reward_stack = reward_stack
                         experience = [[], [], []]
 
 #                         print('obs_stack', obs_stack.shape)
