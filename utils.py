@@ -59,12 +59,11 @@ class Annealer():
 		self.end_value = end_value
 		self.period = float(period)
 
-	def linear(self, step):
-		epsilon = self.initial_value - self.initial_value*step/self.period
-		if epsilon < self.end_value:
-			return self.end_value
-		return epsilon
 
+	def linear(self, step):
+		slope = (self.end_value - self.initial_value)/self.period
+		epsilon = slope*step + self.initial_value
+		return max(epsilon, self.end_value)
 
 class Experience_buffer():
 	""" Consists of a list of 'experience', each of which is a dict.
