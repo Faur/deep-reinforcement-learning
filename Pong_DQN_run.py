@@ -33,7 +33,7 @@ IS_DEBUGGING = False
 learning_rate = 0.00025 # Human paper
 # max_train_frame = 2e6
 max_train_frame = 2e6
-max_train_frame = 5e6
+max_train_frame = 5e7
 max_episode_frame = 5000
 
 

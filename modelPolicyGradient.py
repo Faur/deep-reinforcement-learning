@@ -29,7 +29,7 @@ class PolicyGradient:
 
         self.render = render
         
-        self.obsPH = tf.placeholder(tf.float32, shape=[None]+[self.config.num_state], name='obsPlaceholder')
+        self.obsPH = tf.placeholder(tf.float32, shape=[None]+self.config.num_state, name='obsPlaceholder')
         self.actionPH = tf.placeholder(tf.int32, shape=[None], name='actionPlaceholder')
         self.learningRatePH = tf.placeholder(tf.float32, shape=[], name='learningratePlaceholder')
         self.advantagePH = tf.placeholder(tf.float32, shape=[None], name='advantagePlaceholder')
@@ -48,7 +48,13 @@ class PolicyGradient:
 
     def _build_model(self):
         input_layer = Input(tensor=self.obsPH)
-        model_layers = networks.build_dense(input_layer, self.config.layers, name_stem='dense_')
+        if self.config.model_type == 'dense':
+            model_layers = networks.build_dense(input_layer, self.config.layers, name_stem='dense_')
+        elif self.config.model_type == 'conv':
+            model_layers = networks.build_conv(input_layer)
+        else:
+            print("ERROR:", self.config.model_type, "is an unrecognized model type.")
+
         model = Model(inputs=input_layer, outputs=model_layers)
         return model
 
@@ -262,12 +268,21 @@ class PolicyGradient:
                                            value=len(experience[0]),
                                            step=self.frame)
  
-                        # stack experience
-                        obs_stack = np.vstack(experience[0])
+                         # stack experience
+                        if self.config.model_type == 'dense':
+                            obs_stack = np.vstack(experience[0]) # 
+                        elif self.config.model_type == 'conv':
+                            obs_stack = np.stack(experience[0], axis=0)
+                        else:
+                            print('ERROR: self.config.model_type:', self.config.model_type,
+                                'not recognized!')
+                            error
+
                         action_stack = np.vstack(experience[1])
                         action_stack = np.squeeze(action_stack)
                         reward_stack = np.vstack(experience[2])
                         reward_stack = np.squeeze(reward_stack)
+
 
                         ## normalize discounted reward
                         # reward_std = np.std(reward_stack)
