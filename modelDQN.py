@@ -9,6 +9,7 @@ import gym
 from tensorflow.contrib.keras.api.keras.layers import Dense, Input, Conv2D, Flatten
 from tensorflow.contrib.keras.api.keras.models import Model
 from matplotlib.font_manager import FontProperties
+import matplotlib.pyplot as plt
 
 ## Custom libraries
 import utils
@@ -33,7 +34,7 @@ class DQN(object):
         
         self.render = render
         
-        self.obsPH = tf.placeholder(tf.float32, shape=[None]+[self.config.num_state], name='obsPlaceholder')
+        self.obsPH = tf.placeholder(tf.float32, shape=[None]+self.config.num_state, name='obsPlaceholder')
         self.actionPH = tf.placeholder(tf.int32, shape=[None], name='actionPlaceholder')
         self.learningRatePH = tf.placeholder(tf.float32, shape=[], name='learningratePlaceholder')
         self.targetQPH = tf.placeholder(tf.float32, shape=[None], name='targetQPlaceholder')
@@ -50,6 +51,10 @@ class DQN(object):
         ## Build model and main graph
         if self.config.model_type == 'dense':
             self.DQN_std, self.DQN_tgt = self._build_dense_model()
+        elif self.config.model_type == 'conv':
+            self.DQN_std, self.DQN_tgt = self._build_conv_model()
+        else:
+            print("ERROR:", self.config.model_type, "is an unrecognized model type.")
         self.graph = self._build_graph(self.DQN_std, self.DQN_tgt)
         
         ## Setup and finalize
@@ -73,6 +78,20 @@ class DQN(object):
             DQN_tgt = Model(inputs=input_layer, outputs=model_layers)
         
         return DQN_std, DQN_tgt
+
+    def _build_conv_model(self):
+        input_layer = Input(tensor=self.obsPH)
+        
+        with tf.variable_scope('DQN_std'): # std graph must be constructed before tgt!
+            model_layers = networks.build_conv(input_layer)
+            DQN_std = Model(inputs=input_layer, outputs=model_layers)
+        
+        with tf.variable_scope('DQN_tgt'):
+            model_layers = networks.build_conv(input_layer)
+            DQN_tgt = Model(inputs=input_layer, outputs=model_layers)
+        
+        return DQN_std, DQN_tgt
+
     
     def _build_graph(self, model_std, model_tgt):
         ## TODO: Ideally this should be broken into two part
@@ -324,6 +343,7 @@ class DQN(object):
                     reward_sum += reward
                     img = self.env.render(mode='rgb_array')
 
+
                     if t_max - ep_t < 10:
                         t_max += 50
                     
@@ -362,7 +382,7 @@ class DQN(object):
                     fig.add_subplot(224)
                     plt.title('Action')
                     plt.plot(actions)
-                    plt.ylim([-0.1, 1.1])
+                    plt.ylim([-0.1, self.config.num_action-0.9])
                     plt.xlim([0,t_max])
 
                     plt.tight_layout()

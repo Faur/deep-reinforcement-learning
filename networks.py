@@ -11,7 +11,7 @@ from tensorflow.contrib.keras.api.keras.models import Model
 
 import utils
 
-def build_DQN(input_layer):
+def build_conv(input_layer):
     # with tf.name_scope('DQN'):
     # input_layer = Input(tensor=input_ph)
     x = Conv2D(32, (8,8), (4,4), activation='relu', name='Conv1')(input_layer)
