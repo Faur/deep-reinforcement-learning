@@ -4,7 +4,7 @@
 env_name = 'CartPole-v1'
 env_max_step = 500
 
-num_state = 4
+num_state = [4]
 num_action = 2
 
 eps = 1e-10 # Small offset to prevent NAN etc.
