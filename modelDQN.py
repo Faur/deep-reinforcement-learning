@@ -271,6 +271,7 @@ class DQN(object):
                                       feed_dict=DQN1_train_dict)
 
                 if self.frame % int(1e3) == 0:
+		    print('logging\t', self.frame, '\t', self.episode)
                     ## Tensorboard logging
                     self.summary_writer.add_summary(summary, self.frame)
                     self.logger.log_scalar('training/learning_rate', self.lr_annealer.linear(self.frame), self.frame)
