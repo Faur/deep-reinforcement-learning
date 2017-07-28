@@ -8,7 +8,7 @@ import time
 ## 3rd party
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+# %matplotlib inline
 import tensorflow as tf
 import gym
 
