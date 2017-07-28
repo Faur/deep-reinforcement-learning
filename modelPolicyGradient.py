@@ -15,13 +15,14 @@ import networks
 import Logger
 
 class PolicyGradient:
-    def __init__(self, config, logdir, learning_rate, max_train_frame=1e6, render=False):
+    def __init__(self, config, env, logdir, learning_rate, max_train_frame=1e6, render=False):
         self.should_stop = False
         self.frame = 0
         self.episode = 0
         self.train_interval = 1 # episodes
 
         self.config = config
+        self.env = env
         self.logdir = logdir
         self.learning_rate = learning_rate
         self.max_train_frame = max_train_frame
@@ -34,7 +35,6 @@ class PolicyGradient:
         self.advantagePH = tf.placeholder(tf.float32, shape=[None], name='advantagePlaceholder')
 
     def build(self):
-        self.env = gym.make(self.config.env_name)
         self.annealer = utils.Annealer(self.learning_rate, 0, self.max_train_frame)
         self.model = self._build_model()
         self.graph = self._build_graph(self.learningRatePH)
@@ -289,11 +289,11 @@ class PolicyGradient:
                                            self.advantagePH : reward_stack,
                                            self.learningRatePH : self.annealer.linear(self.frame)})
 
-                if self.episode % 25 == 0: # we don't actually want to store this much data!!
+                if self.frame % int(self.max_train_frame/500) == 0 and self.frame > 0:
                     self.logger.log_scalar('training/learning_rate', self.annealer.linear(self.frame), self.frame)
                     self.summary_writer.add_summary(summary, self.frame)
                 
-                if self.episode % 500 == 0:
+                if self.frame % int(self.max_train_frame/25) == 0:
                     print('{:8} model saved:'.format(self.frame), self.logdir)
                     self.save_model(self.logdir + '/model_'+str(self.frame))
                 

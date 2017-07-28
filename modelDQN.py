@@ -17,7 +17,7 @@ import Logger
 
 class DQN(object):
     """docstring for DQN""" 
-    def __init__(self, config, logdir, learning_rate, max_train_frame=5e7, max_episode_frame=int(1e4),
+    def __init__(self, config, env, logdir, learning_rate, max_train_frame=5e7, max_episode_frame=int(1e4),
                  render=False):
         self.should_stop = False
         self.frame = -1 # Also create summaries on first run
@@ -25,6 +25,7 @@ class DQN(object):
         self.replay_buffer_size = config.replay_buffer_size
 
         self.config = config
+        self.env = env
         self.logdir = logdir
         self.learning_rate = learning_rate
         self.max_train_frame = max_train_frame
@@ -40,7 +41,6 @@ class DQN(object):
 
     def build(self):
         ## Build helpers
-        self.env = gym.make(self.config.env_name)
         self.lr_annealer = utils.Annealer(self.learning_rate, self.learning_rate/10, self.max_train_frame)
         self.eps_annealer = utils.Annealer(self.config.eps_start,
                                            self.config.eps_end,
