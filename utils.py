@@ -1,12 +1,14 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
+import datetime, time
+
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy.misc import toimage, fromimage
-import datetime, time
+import gym
 
 def time_str():
 	return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-(%H-%M-%S)')
@@ -304,108 +306,100 @@ class Preprocessor_2d():
 		if len(pre.shape)==2:
 			pre = np.expand_dims(pre, axis=-1)
 		assert len(pre.shape)==3, "ERROR: Preprocessor_2d: pre has dim: " + str(pre.shape)
+		pre = pre/255.
 		return pre
 
-	def test(self):
-		print('\n##############################################################################')
-		print('TEST: Preprocessor_2d\n')
-		# get an observation
-		import gym
-		env = gym.make('Breakout-v0')
-		obs = env.reset()
-		preprocessor = Preprocessor_2d(out_shape=[84,84], gray=True)
+	# def test(self):
+	# 	print('\n##############################################################################')
+	# 	print('TEST: Preprocessor_2d\n')
+	# 	# get an observation
+	# 	import gym
+	# 	env = gym.make('Breakout-v0')
+	# 	obs = env.reset()
+	# 	preprocessor = Preprocessor_2d(out_shape=[84,84], gray=True)
 
-		print('Test preprocessing step')
-		pre = preprocessor.process(obs)
-		print('obs', type(obs), obs.shape, np.product(obs.shape))
-		print('pre', type(pre), end=' ')
-		print(pre.shape, np.product(pre.shape))
-		print((1.*np.product(pre.shape))/np.product(obs.shape), '% of original')
-		print()
+	# 	print('Test preprocessing step')
+	# 	pre = preprocessor.process(obs)
+	# 	print('obs', type(obs), obs.shape, np.product(obs.shape))
+	# 	print('pre', type(pre), end=' ')
+	# 	print(pre.shape, np.product(pre.shape))
+	# 	print((1.*np.product(pre.shape))/np.product(obs.shape), '% of original')
+	# 	print()
 
-		# Visualize preprocessing
-		fig, ax = plt.subplots(1,2)
-		fig.suptitle('Preprocessor_2d test')
-		ax[0].imshow(obs)
-		ax[0].set_title('Original')
-		ax[1].imshow(np.squeeze(pre), cmap='gray')
-		ax[1].set_title('After Preprocessing')
-		plt.draw()
+	# 	# Visualize preprocessing
+	# 	fig, ax = plt.subplots(1,2)
+	# 	fig.suptitle('Preprocessor_2d test')
+	# 	ax[0].imshow(obs)
+	# 	ax[0].set_title('Original')
+	# 	ax[1].imshow(np.squeeze(pre), cmap='gray')
+	# 	ax[1].set_title('After Preprocessing')
+	# 	plt.draw()
 
 
 class EnvironmentInterface():
-	def __init__(self, preprocessor=None, action_repeats=1, merge_frames=False):
-		""" 
-		"""
-		self.preprocessor = preprocessor
-		self.action_repeats = action_repeats
-		self.merge_frames = merge_frames
-		
-		if self.merge_frames:
-			assert self.action_repeats > 1, 'ERROR: EnvironmentInterface: '\
-				+ 'Cannot merge frames with action_repeats !> 1.'\
-				+ 'action_repeats = ' + str(self.action_repeats)
+    def __init__(self, config, preprocessor=None, action_repeats=1, obs_buffer_size=1):
+        #, merge_frames=False):
+        """ 
+        """
+        self.env_name = config.env_name
+        self.env = gym.make(config.env_name)
+        self.preprocessor = preprocessor
+        self.action_repeats = action_repeats
+        self.obs_buffer_size = obs_buffer_size
+        
+        self.obs_dim = config.num_state
+        self.single_obs_dim = config.num_state[:2] + [1]
+        
+        self.obsBuf = ObsBuffer(self.single_obs_dim, self.obs_buffer_size)
+#         self.merge_frames = merge_frames
+#         if self.merge_frames:
+#             assert self.action_repeats > 1, 'ERROR: EnvironmentInterface: '\
+#                 + 'Cannot merge frames with action_repeats !> 1.'\
+#                 + 'action_repeats = ' + str(self.action_repeats)
 
-	def take_action(self, action, env):
-		""" Take an action self.action_repeats times, and return an
-			(optionally) preprocessed obs
-		"""
-		obs = None
-		prev_obs = obs
-		total_reward = 0
-		done = False
-		info = ''
+    def step(self, action):
+        """ Perform action self.action_repeats times times.
+            Preprocess the last observation, and add it to the observation buffer.
+            Return an observation from the observation buffer, cumulative reward
+        """
+        ## repeat action 
+        obs = None
+        total_reward = 0
+        done = False
+        infos = []
 
-		# Repeat action self.action_repeats times
-		for i in range(self.action_repeats):
-			prev_obs = obs
-			obs, reward, done, info = env.step(action)
-			total_reward += reward
-			if done: break
+        # Repeat action self.action_repeats times
+        for i in range(self.action_repeats):
+            obs, reward, done, info = self.env.step(action)
+            total_reward += reward
+            infos.append(info)
+            if done: break
 
-		if self.merge_frames:
-			obs = np.maximum(obs, prev_obs)
+        ## Preprocess last obs
+        if self.preprocessor is not None:
+            obs = self.preprocessor.process(obs)
+        
+        ## Add processed obs to obsBuf
+        self.obsBuf.add(obs)
+        
+        ## Return
+        return self.obsBuf.get(), total_reward, done, infos
+        
+    def render(self, close=False, mode='human'):
+        self.env.render(close=close, mode=mode)
+        
+    def reset(self):
+        """Simple wrapper that restarts the environment"""
+        obs = self.env.reset()
 
-		if self.preprocessor is not None:
-			obs = self.preprocessor.process(obs)
-
-		return obs, total_reward, done, info
-	
-	def reset(self, env):
-		"""Simple wrapper that restarts the environment"""
-		obs = env.reset()
-		episode_time_step = 0
-		episode_reward = 0
-		
-		if self.preprocessor is not None:
-			obs = self.preprocessor.process(obs)
-		return obs, episode_time_step, episode_reward
-
-	def test(self):
-		print('\n##############################################################################')
-		print('TEST: EnvironmentInterface\n')
-		import gym
-		env = gym.make('Breakout-v0')
-		preprocessor = Preprocessor_2d([84, 84], gray=True)
-
-		envInter = EnvironmentInterface(preprocessor=preprocessor, action_repeats=4, merge_frames=True)
-
-		obs, eps_r, eps_t = envInter.reset(env)
-		print('obs from reset: ', type(obs), obs.shape)
-		fig, ax = plt.subplots(2,2)
-		fig.suptitle('EnvironmentInterface test')
-		for i in range(2):
-			for j in range(2):
-				obs, reward, done, info = envInter.take_action(1, env)
-				ax[i][j].imshow(np.squeeze(obs), cmap='gray')
-				ax[i][j].set_title('t = ' + str(5 - i*2 - j))
-				ax[i][j].axis('off')
-		fig.tight_layout()
-
-		print('obs from take_action: ', type(obs), obs.shape)
-
-		plt.draw()
-
+        if self.preprocessor is not None:
+            obs = self.preprocessor.process(obs)
+        
+        self.obsBuf.reset()
+        self.obsBuf.add(obs)
+        
+        return self.obsBuf.get()
+    
 
 
 if __name__=='__main__':
