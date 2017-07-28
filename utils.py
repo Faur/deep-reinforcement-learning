@@ -386,7 +386,7 @@ class EnvironmentInterface():
         return self.obsBuf.get(), total_reward, done, infos
         
     def render(self, close=False, mode='human'):
-        self.env.render(close=close, mode=mode)
+        return self.env.render(close=close, mode=mode)
         
     def reset(self):
         """Simple wrapper that restarts the environment"""
